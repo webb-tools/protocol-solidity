@@ -2,6 +2,7 @@ import { IAnchorDeposit, IAnchorDepositInfo } from './anchor';
 import { AnchorBase } from '@webb-tools/contracts';
 import { MerkleProof, Utxo } from "@webb-tools/sdk-core";
 import { BigNumberish, ethers } from 'ethers';
+import { Overrides } from '@webb-tools/utils';
 
 export interface IAnchor {
   signer: ethers.Signer;
@@ -42,8 +43,9 @@ export interface IAnchor {
     relayer: string,
     fee: bigint,
     refreshCommitment: string | number,
+    overrides?: Overrides
   ): Promise<ethers.Event>
-  wrapAndDeposit(tokenAddress: string, wrappingFee: number, destinationChainId?: number): Promise<IAnchorDeposit>;
+  wrapAndDeposit(tokenAddress: string, wrappingFee: number, destinationChainId: number, overrides?: Overrides): Promise<IAnchorDeposit>;
   bridgedWithdrawAndUnwrap(
     deposit: IAnchorDeposit,
     merkleProof: any,
@@ -62,6 +64,7 @@ export interface IAnchor {
     fee: string,
     refund: string,
     refreshCommitment: string,
+    overrides?: Overrides,
   ): Promise<ethers.Event>
 
   // VAnchor methods

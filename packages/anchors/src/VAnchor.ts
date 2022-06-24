@@ -21,7 +21,7 @@ import {
   FIELD_SIZE
 } from '@webb-tools/sdk-core';
 import { IAnchorDeposit, IAnchor, IVariableAnchorExtData, IVariableAnchorPublicInputs, IAnchorDepositInfo } from '@webb-tools/interfaces';
-import { getChainIdType, ZkComponents } from '@webb-tools/utils';
+import { getChainIdType, ZkComponents, Overrides } from '@webb-tools/utils';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
 
 const zeroAddress = "0x0000000000000000000000000000000000000000";
@@ -89,10 +89,11 @@ export class VAnchor implements IAnchor {
     relayer: string,
     fee: bigint,
     refreshCommitment: string | number,
+    overrides?: Overrides
   ): Promise<ethers.Event> {
     throw new Error("Method not implemented.");
   }
-  wrapAndDeposit(tokenAddress: string, wrappingFee: number, destinationChainId?: number): Promise<IAnchorDeposit> {
+  wrapAndDeposit(tokenAddress: string, wrappingFee: number, destinationChainId: number, overrides?: Overrides): Promise<IAnchorDeposit> {
     throw new Error("Method not implemented.");
   }
   bridgedWithdrawAndUnwrap(deposit: IAnchorDeposit, merkleProof: any, recipient: string, relayer: string, fee: string, refund: string, refreshCommitment: string, tokenAddress: string): Promise<ethers.Event> {

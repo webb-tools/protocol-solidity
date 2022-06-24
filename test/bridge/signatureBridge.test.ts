@@ -12,7 +12,7 @@ const path = require('path');
 import { Anchor } from '../../packages/anchors/src';
 import { FixedDepositAnchor__factory, GovernedTokenWrapper__factory } from '@webb-tools/contracts';
 import { SignatureBridge } from '../../packages/bridges/src'; 
-import { BridgeInput } from '../../packages/interfaces/src';
+import { BridgeInput, DeployerConfig } from '../../packages/interfaces/src';
 import { MintableToken } from '../../packages/tokens/src';
 import { fetchComponentsFromFilePaths, getChainIdType, ZkComponents } from '../../packages/utils/src';
 import { BigNumber } from '@ethersproject/bignumber';
@@ -25,7 +25,7 @@ describe('multichain tests for erc20 bridges', () => {
   const chainID1 = getChainIdType(31337);
   const chainID2 = getChainIdType(1337);
   const chainID3 = getChainIdType(9999);
-  const chainID4 = getChainIdType(4444)
+  const chainID4 = getChainIdType(4444);
   // setup ganache networks
   let ganacheServer2: any;
   let ganacheServer3: any;
@@ -115,9 +115,15 @@ describe('multichain tests for erc20 bridges', () => {
       
       const signers = await ethers.getSigners();
 
-      const deploymentConfig = {
-        [chainID1]: signers[1],
-        [chainID2]: ganacheWallet2,
+      const deploymentConfig: DeployerConfig = {
+        wallets: {
+          [chainID1]: signers[1] as Signer,
+          [chainID2]: ganacheWallet2 as Signer,
+        },
+        gasLimits: {
+          [chainID1]: '0x5B8D80',
+          [chainID2]: '0x5B8D80',
+        }
       };
 
       const initialGovernorsConfig = {
@@ -125,7 +131,11 @@ describe('multichain tests for erc20 bridges', () => {
         [chainID2]: ethers.Wallet.createRandom(),
       };
 
+      console.log('before deployFixedDepositBridge');
+
       const bridge = await SignatureBridge.deployFixedDepositBridge(bridge2WebbEthInput, deploymentConfig, initialGovernorsConfig, zkComponents2);
+
+      console.log('after deployFixedDepositBridge');
 
       // Should be able to retrieve individual anchors
       const anchorSize = '1000000000000000000';
@@ -140,9 +150,13 @@ describe('multichain tests for erc20 bridges', () => {
       // get the state of anchors before deposit
       const sourceAnchorRootBefore = await anchor1.contract.getLastRoot();
 
+      console.log('before bridgeDeposit');
+
       // Deposit on the bridge
       const depositNote = await bridge.deposit(chainID2, anchorSize, signers[2]);
       
+      console.log('after bridgeDeposit');
+
       // Check the state of anchors after deposit
       let edgeIndex = await anchor2.contract.edgeIndex(chainID1);
 
@@ -152,7 +166,11 @@ describe('multichain tests for erc20 bridges', () => {
       // make sure the roots / anchors state have changed
       assert.notEqual(sourceAnchorRootAfter, sourceAnchorRootBefore);
       assert.deepEqual(ethers.BigNumber.from(0), destAnchorEdgeAfter.latestLeafIndex);
+      console.log('before bridgeWithdraw');
+
       await bridge.withdraw(depositNote, anchorSize, signers[1].address, signers[1].address, ganacheWallet2);
+      console.log('after bridgeWithdraw');
+
       const webbTokenAddress2 = bridge.getWebbTokenAddress(chainID2);
       const webbToken2 = await MintableToken.tokenFromAddress(webbTokenAddress2!, ganacheWallet2);
       const webbTokenBalance2 = await webbToken2.getBalance(signers[1].address);
@@ -176,9 +194,11 @@ describe('multichain tests for erc20 bridges', () => {
       const signers = await ethers.getSigners();
 
       const deploymentConfig = {
-        [chainID1]: signers[1],
-        [chainID2]: ganacheWallet2,
-        [chainID3]: ganacheWallet3,
+        wallets: {
+          [chainID1]: signers[1],
+          [chainID2]: ganacheWallet2,
+          [chainID3]: ganacheWallet3,
+        }
       };
 
       const initialGovernorsConfig = {
@@ -261,8 +281,10 @@ describe('multichain tests for erc20 bridges', () => {
 
       // setup the config for deployers of contracts (admins)
       const deploymentConfig = {
-        [chainID1]: signers[1],
-        [chainID2]: ganacheWallet2,
+        wallets: {
+          [chainID1]: signers[1],
+          [chainID2]: ganacheWallet2,
+        }
       }
 
       const initialGovernorsConfig = {
@@ -511,10 +533,12 @@ describe('multichain tests for erc20 bridges', () => {
 
       // setup the config for deployers of contracts (admins)
       const deploymentConfig = {
-        [chainID1]: signers[1],
-        [chainID2]: ganacheWallet2,
-        [chainID3]: ganacheWallet3,
-        [chainID4]: ganacheWallet4,
+        wallets: {
+          [chainID1]: signers[1],
+          [chainID2]: ganacheWallet2,
+          [chainID3]: ganacheWallet3,
+          [chainID4]: ganacheWallet4,
+        }
       }
 
       const initialGovernorsConfig = {

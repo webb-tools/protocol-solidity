@@ -35,13 +35,13 @@ const config: HardhatUserConfig = {
       }
     }],
   },
+  mocha: {
+    timeout: 60000
+  },
   // @ts-ignore
   dodoc: {
     include: ["FixedDepositAnchor", "AnchorBase", "LinkableAnchor", "AnchorHandler", "IAnchor", "IAnchorTrees", "ILinkableAnchor", "VAnchorEncodeInputs", "GovernedTokenWrapper", "TokenWrapperHandler", "Hasher", , "MerkleTreePoseidon", "MerkleTreeWithHistoryPoseidon", "Poseidon", "SnarkConstants", "LinkableVAnchor", "VAnchor", "VAnchorBase", "AnchorProxy", "Bridge"]
   },
-  mocha: {
-    timeout: 60000
-  }
 };
 
 export default config;
