@@ -190,7 +190,6 @@ export class VBridge {
       for (const tokenToBeWrapped of vBridgeInput.vAnchorInputs.asset[chainID]!) {
         // if the address is not '0', then add it
         if (!checkNativeAddress(tokenToBeWrapped)) {
-          console.log('attempted to executeAddTokenProposal of token: ', tokenToBeWrapped);
           await vBridgeInstance.executeAddTokenProposalWithSig(tokenInstance, tokenToBeWrapped);
         }
       }

@@ -669,20 +669,22 @@ export class VAnchor implements IAnchor {
       leavesMap,
     );
 
-    const gasEstimate = await this.contract.estimateGas.transactWrap(
-      {
-        ...publicInputs,
-        outputCommitments: [
-          publicInputs.outputCommitments[0],
-          publicInputs.outputCommitments[1],
-        ]
-      },
-      extData,
-      tokenAddress
-    );
-
     let tx: ContractTransaction;
     if (extAmount.gt(0) && checkNativeAddress(tokenAddress)) {
+      const gasEstimate = await this.contract.estimateGas.transactWrap(
+        {
+          ...publicInputs,
+          outputCommitments: [
+            publicInputs.outputCommitments[0],
+            publicInputs.outputCommitments[1],
+          ]
+        },
+        extData,
+        tokenAddress,
+        { 
+          value: extAmount
+        }
+      );
       tx = await this.contract.transactWrap(
         {
           ...publicInputs,
@@ -699,6 +701,17 @@ export class VAnchor implements IAnchor {
         }
       );
     } else {
+      const gasEstimate = await this.contract.estimateGas.transactWrap(
+        {
+          ...publicInputs,
+          outputCommitments: [
+            publicInputs.outputCommitments[0],
+            publicInputs.outputCommitments[1],
+          ]
+        },
+        extData,
+        tokenAddress
+      );
       tx = await this.contract.transactWrap(
         {
           ...publicInputs,

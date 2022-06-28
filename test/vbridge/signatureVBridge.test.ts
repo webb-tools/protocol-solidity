@@ -481,7 +481,7 @@ describe('2-sided multichain tests for signature vbridge', () => {
     })
   })
 
-  describe.only('2 sided bridge existing token test wrapping functionality', () => {
+  describe('2 sided bridge existing token test wrapping functionality', () => {
     // ERC20 compliant contracts that can easily create balances for test
     let existingToken1: MintableToken;
     let existingToken2: MintableToken;
@@ -578,7 +578,7 @@ describe('2-sided multichain tests for signature vbridge', () => {
         assert.strictEqual(vAnchor2Balance.toString(), BigNumber.from(1e7).toString());
       });
 
-      it.only('should transactWrap with native', async () => {
+      it('should transactWrap with native', async () => {
         //Deposit UTXO
         const hardhatDepositUtxo1 = await CircomUtxo.generateUtxo({
           curve: 'Bn254',
