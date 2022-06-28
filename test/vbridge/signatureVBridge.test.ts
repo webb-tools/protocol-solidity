@@ -14,6 +14,7 @@ import { BigNumber, ethers } from 'ethers';
 import { fetchComponentsFromFilePaths, getChainIdType, ZkComponents } from '../../packages/utils/src';
 import { startGanacheServer } from '@webb-tools/test-utils';
 import { CircomUtxo } from '@webb-tools/sdk-core';
+import { DeployerConfig, GovernorConfig } from '@webb-tools/interfaces';
 
 const path = require('path');
 
@@ -90,14 +91,12 @@ describe.only('2-sided multichain tests for signature vbridge', () => {
       };
       const signers = await hhEthers.getSigners();
 
-      const deploymentConfig = {
-        wallets: {
-          [chainID1]: hardhatWallet1,
-          [chainID2]: ganacheWallet2,
-        }
+      const deploymentConfig: DeployerConfig = {
+        [chainID1]: hardhatWallet1,
+        [chainID2]: ganacheWallet2,
       };
 
-      const initialGovernorsConfig: Record<number, ethers.Wallet> = {
+      const initialGovernorsConfig: GovernorConfig = {
         [chainID1]: hardhatWallet1,
         [chainID2]: ganacheWallet2,
       };
@@ -182,14 +181,12 @@ describe.only('2-sided multichain tests for signature vbridge', () => {
       }
 
       // setup the config for deployers of contracts (admins)
-      const deploymentConfig = {
-        wallets: {
-          [chainID1]: hardhatWallet1,
-          [chainID2]: ganacheWallet2,
-        }
+      const deploymentConfig: DeployerConfig = {
+        [chainID1]: hardhatWallet1,
+        [chainID2]: ganacheWallet2,
       }
 
-      const initialGovernorsConfig = {
+      const initialGovernorsConfig: GovernorConfig = {
         [chainID1]: hardhatWallet1,
         [chainID2]: ganacheWallet2,
       };
@@ -519,14 +516,12 @@ describe.only('2-sided multichain tests for signature vbridge', () => {
       }
 
       // setup the config for deployers of contracts (admins)
-      const deploymentConfig = {
-        wallets: {
-          [chainID1]: hardhatWallet1,
-          [chainID2]: ganacheWallet2,
-        }
+      const deploymentConfig: DeployerConfig = {
+        [chainID1]: hardhatWallet1,
+        [chainID2]: ganacheWallet2,
       }
 
-      const initialGovernorsConfig = {
+      const initialGovernorsConfig: GovernorConfig = {
         [chainID1]: ethers.Wallet.createRandom(),
         [chainID2]: ethers.Wallet.createRandom(),
       };
@@ -825,15 +820,13 @@ describe('8-sided multichain tests for signature vbridge', () => {
       }
 
       // setup the config for deployers of contracts (admins)
-      const deploymentConfig = {
-        wallets: {
-          [chainID1]: hardhatWallet1,
-          [chainID2]: ganacheWallet2,
-          [chainID3]: ganacheWallet3,
-        }
+      const deploymentConfig: DeployerConfig = {
+        [chainID1]: hardhatWallet1,
+        [chainID2]: ganacheWallet2,
+        [chainID3]: ganacheWallet3,
       }
 
-      const initialGovernorsConfig = {
+      const initialGovernorsConfig: GovernorConfig = {
         [chainID1]: ethers.Wallet.createRandom(),
         [chainID2]: ethers.Wallet.createRandom(),
         [chainID3]: ethers.Wallet.createRandom(),

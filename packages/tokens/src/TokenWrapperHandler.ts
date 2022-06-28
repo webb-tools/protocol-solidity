@@ -1,4 +1,4 @@
-import { ethers, Overrides } from 'ethers';
+import { ethers } from 'ethers';
 import { TokenWrapperHandler as TokenWrapperHandlerContract, TokenWrapperHandler__factory } from '@webb-tools/contracts';
 
 export class TokenWrapperHandler {
@@ -14,11 +14,12 @@ export class TokenWrapperHandler {
     bridgeAddress: string,
     initResourceIds: string[],
     initContractAddresses: string[],
-    deployer: ethers.Signer,
-    overrides?: Overrides
+    deployer: ethers.Signer
   ) {
     const factory = new TokenWrapperHandler__factory(deployer);
-    const contract = await factory.deploy(bridgeAddress, initResourceIds, initContractAddresses, overrides ?? {});
+    const deployTx = factory.getDeployTransaction(bridgeAddress, initResourceIds, initContractAddresses).data;
+    const gasEstimate = await factory.signer.estimateGas({ data: deployTx });
+    const contract = await factory.deploy(bridgeAddress, initResourceIds, initContractAddresses, { gasLimit: gasEstimate });
     await contract.deployed();
 
     const handler = new TokenWrapperHandler(contract);

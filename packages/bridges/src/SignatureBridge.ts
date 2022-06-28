@@ -1,4 +1,4 @@
-import { ethers, Overrides } from 'ethers';
+import { ethers } from 'ethers';
 import { getChainIdType, ZkComponents } from "@webb-tools/utils";
 import { PoseidonT3__factory } from "@webb-tools/contracts";
 import { MintableToken, GovernedTokenWrapper, Treasury, TreasuryHandler, TokenWrapperHandler } from "@webb-tools/tokens";
@@ -11,12 +11,6 @@ type AnchorIdentifier = {
   anchorSize: ethers.BigNumberish;
   chainId: number;
 };
-
-type AnchorQuery = {
-  anchorSize?: ethers.BigNumberish;
-  chainId?: number;
-  tokenAddress?: string;
-}
 
 export type SignatureBridgeConfig = {
 
@@ -41,7 +35,6 @@ function checkNativeAddress(tokenAddress: string): boolean {
   return false;
 }
 
-// A bridge is 
 export class SignatureBridge {
   private constructor(
     // Mapping of chainId => bridgeSide
@@ -111,28 +104,29 @@ export class SignatureBridge {
       // Create the bridgeSide
       const bridgeInstance = await SignatureBridgeSide.createBridgeSide(
         initialGovernor,
-        deployers.wallets[chainID],
+        deployers[chainID],
       );
 
-      const handler = await AnchorHandler.createAnchorHandler(bridgeInstance.contract.address, [],[], bridgeInstance.admin, deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'});
+      const handler = await AnchorHandler.createAnchorHandler(bridgeInstance.contract.address, [],[], bridgeInstance.admin);
       await bridgeInstance.setAnchorHandler(handler);
 
       bridgeSides.set(chainID, bridgeInstance);
 
       // Create Treasury and TreasuryHandler
-      const treasuryHandler = await TreasuryHandler.createTreasuryHandler(bridgeInstance.contract.address, [],[], bridgeInstance.admin, deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'});
-
-      const treasury = await Treasury.createTreasury(treasuryHandler.contract.address, bridgeInstance.admin, deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'});
+      const treasuryHandler = await TreasuryHandler.createTreasuryHandler(bridgeInstance.contract.address, [],[], bridgeInstance.admin);
+      const treasury = await Treasury.createTreasury(treasuryHandler.contract.address, bridgeInstance.admin);
 
       await bridgeInstance.setTreasuryHandler(treasuryHandler);
       await bridgeInstance.setTreasuryResourceWithSignature(treasury);
 
       // Create the Hasher and Verifier for the chain
-      const hasherFactory = new PoseidonT3__factory(deployers.wallets[chainID]);
-      let hasherInstance = await hasherFactory.deploy(deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'});
+      const hasherFactory = new PoseidonT3__factory(deployers[chainID]);
+      const deployTx = hasherFactory.getDeployTransaction().data;
+      const gasEstimate = hasherFactory.signer.estimateGas({ data: deployTx })
+      let hasherInstance = await hasherFactory.deploy({ gasLimit: gasEstimate });
       await hasherInstance.deployed();
 
-      const verifier = await Verifier.createVerifier(deployers.wallets[chainID], deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'});
+      const verifier = await Verifier.createVerifier(deployers[chainID]);
       let verifierInstance = verifier.contract;
 
       // Check the addresses of the asset. If it is zero, deploy a native token wrapper
@@ -153,17 +147,17 @@ export class SignatureBridge {
         tokenWrapperHandler.contract.address,
         '10000000000000000000000000',
         allowedNative,
-        deployers.wallets[chainID],
+        deployers[chainID],
       );
 
       await bridgeInstance.setTokenWrapperHandler(tokenWrapperHandler);
-      await bridgeInstance.setGovernedTokenResourceWithSignature(tokenInstance, deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'});
+      await bridgeInstance.setGovernedTokenResourceWithSignature(tokenInstance);
 
       // Add all token addresses to the governed token instance.
       for (const tokenToBeWrapped of bridgeInput.anchorInputs.asset[chainID]!) {
         // if the address is not '0', then add it
         if (!checkNativeAddress(tokenToBeWrapped)) {
-          const tx = await bridgeInstance.executeAddTokenProposalWithSig(tokenInstance, tokenToBeWrapped, deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'});
+          await bridgeInstance.executeAddTokenProposalWithSig(tokenInstance, tokenToBeWrapped);
         }
       }
 
@@ -188,12 +182,11 @@ export class SignatureBridge {
           handler.contract.address,
           bridgeInput.chainIDs.length-1,
           zkComponents,
-          deployers.wallets[chainID],
-          deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'}
+          deployers[chainID]
         );
 
         // grant minting rights to the anchor
-        await tokenInstance.grantMinterRole(anchorInstance.contract.address, deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'}); 
+        await tokenInstance.grantMinterRole(anchorInstance.contract.address); 
 
         chainGroupedAnchors.push(anchorInstance);
         anchors.set(
@@ -201,7 +194,7 @@ export class SignatureBridge {
           anchorInstance
         );
       }
-      await SignatureBridge.setPermissions(bridgeInstance, chainGroupedAnchors, deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'});
+      await SignatureBridge.setPermissions(bridgeInstance, chainGroupedAnchors);
       createdAnchors.push(chainGroupedAnchors);
     }
 
@@ -225,13 +218,13 @@ export class SignatureBridge {
   // The setPermissions method accepts initialized bridgeSide and anchors.
   // it creates the anchor handler and sets the appropriate permissions
   // for the bridgeSide/AnchorHandler/anchor
-  public static async setPermissions(bridgeSide: SignatureBridgeSide, anchors: Anchor[], overrides?: Overrides): Promise<void> {
+  public static async setPermissions(bridgeSide: SignatureBridgeSide, anchors: Anchor[]): Promise<void> {
     for (let anchor of anchors) {
-      await bridgeSide.setResourceWithSignature(anchor, overrides ?? { gasLimit: '0x5B8D80'});
+      await bridgeSide.setResourceWithSignature(anchor);
     }
 
     for (let anchor of anchors) {
-      await bridgeSide.connectAnchorWithSignature(anchor, overrides ?? { gasLimit: '0x5B8D80'});
+      await bridgeSide.connectAnchorWithSignature(anchor);
     }
   }
 
@@ -241,7 +234,7 @@ export class SignatureBridge {
   * @param srcAnchor The anchor that has updated.
   * @returns 
   */
-  public async updateLinkedAnchors(srcAnchor: Anchor, overrides?: Overrides) {
+  public async updateLinkedAnchors(srcAnchor: Anchor) {
     // Find the bridge sides that are connected to this Anchor
     const linkedResourceID = await srcAnchor.createResourceId();
     const anchorsToUpdate = this.linkedAnchors.get(linkedResourceID);
@@ -255,7 +248,7 @@ export class SignatureBridge {
       const resourceID = await anchor.createResourceId();
       const chainId = getChainIdType(await anchor.signer.getChainId());
       const bridgeSide = this.bridgeSides.get(chainId);
-      await bridgeSide!.executeAnchorProposalWithSig(srcAnchor, resourceID, overrides ?? { gasLimit: '0x5B8D80'});
+      await bridgeSide!.executeAnchorProposalWithSig(srcAnchor, resourceID);
     }
   };
 
@@ -329,7 +322,7 @@ export class SignatureBridge {
     return deposit;
   }
 
-  public async wrapAndDeposit(destinationChainId: number, tokenAddress: string, anchorSize: ethers.BigNumberish, wrappingFee: number = 0, signer: ethers.Signer) {
+  public async wrapAndDeposit(destinationChainId: number, tokenAddress: string, anchorSize: ethers.BigNumberish, wrappingFee: number, signer: ethers.Signer) {
     const chainId = getChainIdType(await signer.getChainId());
     const signerAddress = await signer.getAddress();
     const anchor = this.getAnchor(chainId, anchorSize);

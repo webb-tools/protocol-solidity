@@ -1,4 +1,4 @@
-import { BigNumber, BigNumberish, ContractTransaction, ethers, Overrides } from "ethers";
+import { BigNumber, BigNumberish, ContractTransaction, ethers } from "ethers";
 import { ERC20PresetMinterPauser, ERC20PresetMinterPauser__factory } from '@webb-tools/contracts';
 
 class MintableToken {
@@ -23,11 +23,12 @@ class MintableToken {
     name: string,
     symbol: string,
     creator: ethers.Signer,
-    overrides?: Overrides,
   ) {
     const factory = new ERC20PresetMinterPauser__factory(creator);
-    const token = await factory.deploy(name, symbol, overrides || {
-      gasLimit: '0x5B8D80',
+    const deployTx = factory.getDeployTransaction(name, symbol).data;
+    const gasEstimate = factory.signer.estimateGas({ data: deployTx });
+    const token = await factory.deploy(name, symbol, {
+      gasLimit: gasEstimate,
     });
     await token.deployed();
     return new MintableToken(token, name, symbol, creator);
@@ -51,24 +52,27 @@ class MintableToken {
     return this.contract.balanceOf(address);
   }
 
-  public async approveSpending(spender: string, overrides?: Overrides): Promise<ContractTransaction> {
-    return this.contract.approve(spender, '10000000000000000000000000000000000', overrides || {
-      gasLimit: '0x5B8D80',
+  public async approveSpending(spender: string): Promise<ContractTransaction> {
+    const gasEstimate = await this.contract.estimateGas.approve(spender, '10000000000000000000000000000000000');
+    return this.contract.approve(spender, '10000000000000000000000000000000000', {
+      gasLimit: gasEstimate,
     });
   }
 
-  public async mintTokens(address: string, amount: BigNumberish, overrides?: Overrides) {
-    const tx = await this.contract.mint(address, amount, overrides || {
-      gasLimit: '0x5B8D80',
+  public async mintTokens(address: string, amount: BigNumberish) {
+    const gasEstimate = await this.contract.estimateGas.mint(address, amount);
+    const tx = await this.contract.mint(address, amount, {
+      gasLimit: gasEstimate,
     });
     await tx.wait();
     return;
   }
 
-  public grantMinterRole(address: string, overrides?: Overrides) {
+  public async grantMinterRole(address: string) {
     const MINTER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE'));
-    return this.contract.grantRole(MINTER_ROLE, address, overrides || {
-      gasLimit: '0x5B8D80',
+    const gasEstimate = await this.contract.estimateGas.grantRole(MINTER_ROLE, address);
+    return this.contract.grantRole(MINTER_ROLE, address, {
+      gasLimit: gasEstimate,
     });
   }
 }

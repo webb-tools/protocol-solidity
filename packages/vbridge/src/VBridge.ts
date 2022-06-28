@@ -1,4 +1,4 @@
-import { ethers, BigNumber, BigNumberish, Overrides } from 'ethers';
+import { ethers, BigNumber, BigNumberish } from 'ethers';
 import { SignatureBridgeSide } from '@webb-tools/bridges';
 import { MintableToken, GovernedTokenWrapper, TreasuryHandler, Treasury, TokenWrapperHandler } from "@webb-tools/tokens";
 import { PoseidonT3__factory } from "@webb-tools/contracts";
@@ -112,15 +112,14 @@ export class VBridge {
       // Create the bridgeSide
       let vBridgeInstance = await SignatureBridgeSide.createBridgeSide(
        initialGovernor,
-       deployers.wallets[chainID],
+       deployers[chainID],
       );
 
       const handler = await AnchorHandler.createAnchorHandler(
         vBridgeInstance.contract.address,
         [],
         [],
-        vBridgeInstance.admin,
-        deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'}
+        vBridgeInstance.admin
       );
       vBridgeInstance.setAnchorHandler(handler);
 
@@ -131,25 +130,25 @@ export class VBridge {
         vBridgeInstance.contract.address,
         [],
         [],
-        vBridgeInstance.admin,
-        deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'}
+        vBridgeInstance.admin
       );
 
       const treasury = await Treasury.createTreasury(
         treasuryHandler.contract.address,
-        vBridgeInstance.admin,
-        deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'}
+        vBridgeInstance.admin
       );
 
       await vBridgeInstance.setTreasuryHandler(treasuryHandler);
       await vBridgeInstance.setTreasuryResourceWithSignature(treasury);
 
       // Create the Hasher and Verifier for the chain
-      const hasherFactory = new PoseidonT3__factory(deployers.wallets[chainID]);
-      let hasherInstance = await hasherFactory.deploy(deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'});
+      const hasherFactory = new PoseidonT3__factory(deployers[chainID]);
+      const deployTx = hasherFactory.getDeployTransaction().data;
+      const gasEstimate = hasherFactory.signer.estimateGas({ data: deployTx });
+      let hasherInstance = await hasherFactory.deploy({ gasLimit: gasEstimate });
       await hasherInstance.deployed();
 
-      const verifier = await Verifier.createVerifier(deployers.wallets[chainID], deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'});
+      const verifier = await Verifier.createVerifier(deployers[chainID]);
       let verifierInstance = verifier.contract;
 
       // Check the addresses of the asset. If it is zero, deploy a native token wrapper
@@ -166,8 +165,7 @@ export class VBridge {
         vBridgeInstance.contract.address,
         [],
         [],
-        vBridgeInstance.admin,
-        deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'}
+        vBridgeInstance.admin
       );
 
       let tokenInstance: GovernedTokenWrapper;
@@ -179,26 +177,21 @@ export class VBridge {
           tokenWrapperHandler.contract.address,
           '10000000000000000000000000',
           allowedNative,
-          deployers.wallets[chainID],
-          deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'}
+          deployers[chainID]
         );
       } else {
         tokenInstance = vBridgeInput.webbTokens.get(chainID)!;
       }
 
       await vBridgeInstance.setTokenWrapperHandler(tokenWrapperHandler);
-      await vBridgeInstance.setGovernedTokenResourceWithSignature(tokenInstance, deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'});
+      await vBridgeInstance.setGovernedTokenResourceWithSignature(tokenInstance);
       
       // Add all token addresses to the governed token instance.
       for (const tokenToBeWrapped of vBridgeInput.vAnchorInputs.asset[chainID]!) {
         // if the address is not '0', then add it
         if (!checkNativeAddress(tokenToBeWrapped)) {
           console.log('attempted to executeAddTokenProposal of token: ', tokenToBeWrapped);
-          await vBridgeInstance.executeAddTokenProposalWithSig(tokenInstance, tokenToBeWrapped, 
-            deployers.gasLimits
-              ? { gasLimit: deployers.gasLimits[chainID] }
-              : { gasLimit: '0x5B8D80' }
-          );
+          await vBridgeInstance.executeAddTokenProposalWithSig(tokenInstance, tokenToBeWrapped);
         }
       }
       
@@ -220,12 +213,11 @@ export class VBridge {
           vBridgeInput.chainIDs.length > 2 ? 7 : 1,
           smallCircuitZkComponents,
           largeCircuitZkComponents,
-          deployers.wallets[chainID],
-          deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'}
+          deployers[chainID]
       );
 
       // grant minting rights to the anchor
-      await tokenInstance.grantMinterRole(vAnchorInstance.contract.address, deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'}); 
+      await tokenInstance.grantMinterRole(vAnchorInstance.contract.address); 
 
       chainGroupedVAnchors.push(vAnchorInstance);
       vAnchors.set(
@@ -258,19 +250,17 @@ export class VBridge {
   // The setPermissions method accepts initialized bridgeSide and anchors.
   // it creates the anchor handler and sets the appropriate permissions
   // for the bridgeSide/anchorHandler/anchor
-  public static async setPermissions(vBridgeSide: SignatureBridgeSide, vAnchors: VAnchor[], overrides?: Overrides): Promise<void> {
+  public static async setPermissions(vBridgeSide: SignatureBridgeSide, vAnchors: VAnchor[]): Promise<void> {
     let tokenDenomination = '1000000000000000000' // 1 ether
     for (let vAnchor of vAnchors) {
       await vBridgeSide.connectAnchorWithSignature(vAnchor);
       await vBridgeSide.executeMinWithdrawalLimitProposalWithSig(
         vAnchor,
-        BigNumber.from(0).toString(),
-        overrides || {}
+        BigNumber.from(0).toString()
       ); 
       await vBridgeSide.executeMaxDepositLimitProposalWithSig(
         vAnchor,
-        BigNumber.from(tokenDenomination).mul(1_000_000).toString(),
-        overrides || {}
+        BigNumber.from(tokenDenomination).mul(1_000_000).toString()
       ); 
     }
   }

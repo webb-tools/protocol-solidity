@@ -1,4 +1,4 @@
-import { BigNumber, ethers, Overrides } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import { getChainIdType } from '@webb-tools/utils';
 import { toHex, generateFunctionSigHash, toFixedHex } from '@webb-tools/sdk-core';
 import { Treasury as TreasuryContract, Treasury__factory } from '@webb-tools/contracts';
@@ -20,13 +20,14 @@ export class Treasury {
 
   public static async createTreasury(
     treasuryHandler: string,
-    deployer: ethers.Signer,
-    overrides?: Overrides
+    deployer: ethers.Signer
   ) {
     const factory = new Treasury__factory(deployer);
+    const deployTx = await factory.getDeployTransaction(treasuryHandler).data;
+    const gasEstimate = await factory.signer.estimateGas({ data: deployTx });
     const contract = await factory.deploy(
       treasuryHandler,
-      { ...overrides }
+      { gasLimit: gasEstimate }
     );
     await contract.deployed();
 

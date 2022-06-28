@@ -1,4 +1,4 @@
-import { ethers, Overrides } from "ethers";
+import { ethers } from "ethers";
 import { AnchorHandler as AnchorHandlerContract, AnchorHandler__factory } from '@webb-tools/contracts';
 
 export class AnchorHandler {
@@ -15,10 +15,11 @@ export class AnchorHandler {
     initResourceIds: string[],
     initContractAddresses: string[],
     deployer: ethers.Signer,
-    overrides?: Overrides
   ) {
     const factory = new AnchorHandler__factory(deployer);
-    const contract = await factory.deploy(bridgeAddress, initResourceIds, initContractAddresses, overrides || {});
+    const deployTx = factory.getDeployTransaction(bridgeAddress, initResourceIds, initContractAddresses).data;
+    const gasEstimate = await factory.signer.estimateGas({ data: deployTx });
+    const contract = await factory.deploy(bridgeAddress, initResourceIds, initContractAddresses, { gasLimit: gasEstimate });
     await contract.deployed();
 
     const handler = new AnchorHandler(contract);

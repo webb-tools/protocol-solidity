@@ -1,4 +1,4 @@
-import { BigNumber, BigNumberish, ContractTransaction, ethers, Overrides } from 'ethers';
+import { BigNumber, BigNumberish, ContractTransaction, ethers } from 'ethers';
 import { VAnchor as VAnchorContract, VAnchor__factory, VAnchorEncodeInputs__factory } from '@webb-tools/contracts';
 import {
   toHex,
@@ -88,12 +88,11 @@ export class VAnchor implements IAnchor {
     recipient: string,
     relayer: string,
     fee: bigint,
-    refreshCommitment: string | number,
-    overrides?: Overrides
+    refreshCommitment: string | number
   ): Promise<ethers.Event> {
     throw new Error("Method not implemented.");
   }
-  wrapAndDeposit(tokenAddress: string, wrappingFee: number, destinationChainId: number, overrides?: Overrides): Promise<IAnchorDeposit> {
+  wrapAndDeposit(tokenAddress: string, wrappingFee: number, destinationChainId: number): Promise<IAnchorDeposit> {
     throw new Error("Method not implemented.");
   }
   bridgedWithdrawAndUnwrap(deposit: IAnchorDeposit, merkleProof: any, recipient: string, relayer: string, fee: string, refund: string, refreshCommitment: string, tokenAddress: string): Promise<ethers.Event> {
@@ -115,14 +114,17 @@ export class VAnchor implements IAnchor {
     maxEdges: number,
     smallCircuitZkComponents: ZkComponents,
     largeCircuitZkComponents: ZkComponents,
-    signer: ethers.Signer,
-    overrides?: Overrides
+    signer: ethers.Signer
   ) {
     const encodeLibraryFactory = new VAnchorEncodeInputs__factory(signer);
-    const encodeLibrary = await encodeLibraryFactory.deploy(overrides || {});
+    let deployTx = encodeLibraryFactory.getDeployTransaction().data;
+    let gasEstimate = await encodeLibraryFactory.signer.estimateGas({ data: deployTx });
+    const encodeLibrary = await encodeLibraryFactory.deploy({ gasLimit: gasEstimate });
     await encodeLibrary.deployed();
     const factory = new VAnchor__factory({["contracts/libs/VAnchorEncodeInputs.sol:VAnchorEncodeInputs"]: encodeLibrary.address}, signer);
-    const vAnchor = await factory.deploy(verifier, levels, hasher, handler, token, maxEdges, overrides || {});
+    deployTx = factory.getDeployTransaction(verifier, levels, hasher, handler, token, maxEdges).data;
+    gasEstimate = await factory.signer.provider.estimateGas({ data: deployTx });
+    const vAnchor = await factory.deploy(verifier, levels, hasher, handler, token, maxEdges, { gasLimit: gasEstimate });
     await vAnchor.deployed();
     const createdVAnchor = new VAnchor(vAnchor, signer, BigNumber.from(levels).toNumber(), maxEdges, smallCircuitZkComponents, largeCircuitZkComponents);
     createdVAnchor.latestSyncedBlock = vAnchor.deployTransaction.blockNumber!;
@@ -578,7 +580,18 @@ export class VAnchor implements IAnchor {
       leavesMap,
     );
 
-    let tx = await this.contract.transact(
+    const gasEstimate = await this.contract.estimateGas.transact(
+      {
+        ...publicInputs,
+        outputCommitments: [
+          publicInputs.outputCommitments[0],
+          publicInputs.outputCommitments[1],
+        ]
+      },
+      extData
+    );
+
+    const tx = await this.contract.transact(
       {
         ...publicInputs,
         outputCommitments: [
@@ -587,7 +600,7 @@ export class VAnchor implements IAnchor {
         ]
       },
       extData,
-      { gasLimit: '0xBB8D80' }
+      { gasLimit: gasEstimate }
     );
     const receipt = await tx.wait();
     gasBenchmark.push(receipt.gasUsed.toString());
@@ -655,6 +668,19 @@ export class VAnchor implements IAnchor {
       relayer,
       leavesMap,
     );
+
+    const gasEstimate = await this.contract.estimateGas.transactWrap(
+      {
+        ...publicInputs,
+        outputCommitments: [
+          publicInputs.outputCommitments[0],
+          publicInputs.outputCommitments[1],
+        ]
+      },
+      extData,
+      tokenAddress
+    );
+
     let tx: ContractTransaction;
     if (extAmount.gt(0) && checkNativeAddress(tokenAddress)) {
       tx = await this.contract.transactWrap(
@@ -669,7 +695,7 @@ export class VAnchor implements IAnchor {
         tokenAddress,
         { 
           value: extAmount,
-          gasLimit: '0x5B8D80' 
+          gasLimit: gasEstimate
         }
       );
     } else {
@@ -683,7 +709,7 @@ export class VAnchor implements IAnchor {
         },
         extData,
         tokenAddress,
-        { gasLimit: '0x5B8D80' }
+        { gasLimit: gasEstimate }
       );
     }
     const receipt = await tx.wait();
@@ -755,11 +781,17 @@ export class VAnchor implements IAnchor {
       leavesMap,
     );
 
-    let tx = await this.contract.registerAndTransact(
+    const gasEstimate = await this.contract.estimateGas.registerAndTransact(
+      { owner, publicKey },
+      { ...publicInputs, outputCommitments: [publicInputs.outputCommitments[0], publicInputs.outputCommitments[1]] },
+      extData
+    );
+
+    const tx = await this.contract.registerAndTransact(
       { owner, publicKey },
       { ...publicInputs, outputCommitments: [publicInputs.outputCommitments[0], publicInputs.outputCommitments[1]] },
       extData,
-      { gasLimit: '0x5B8D80' }
+      { gasLimit: gasEstimate }
     );
     const receipt = await tx.wait();
 

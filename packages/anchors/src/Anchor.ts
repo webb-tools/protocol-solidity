@@ -1,4 +1,4 @@
-import { BigNumberish, ethers, BigNumber, ContractTransaction, Overrides } from 'ethers';
+import { BigNumberish, ethers, BigNumber, ContractTransaction } from 'ethers';
 import { FixedDepositAnchor as AnchorContract, FixedDepositAnchor__factory as Anchor__factory, ERC20__factory} from '@webb-tools/contracts'
 import { RefreshEvent, WithdrawalEvent } from '@webb-tools/contracts/src/FixedDepositAnchor';
 import { IAnchorDeposit, IAnchorDepositInfo, IAnchor, IFixedAnchorPublicInputs, IFixedAnchorExtData } from '@webb-tools/interfaces';
@@ -88,13 +88,12 @@ class Anchor implements IAnchor {
     handler: string,
     maxEdges: number,
     zkComponents: ZkComponents,
-    signer: ethers.Signer,
-    overrides?: Overrides
+    signer: ethers.Signer
   ) {
     const factory = new Anchor__factory(signer);
-    const anchor = overrides ? 
-      await factory.deploy(handler, token, verifier, hasher, denomination, merkleTreeHeight, maxEdges, overrides) : 
-      await factory.deploy(handler, token, verifier, hasher, denomination, merkleTreeHeight, maxEdges);
+    const deployTx = factory.getDeployTransaction(handler, token, verifier, hasher, denomination, merkleTreeHeight, maxEdges).data;
+    const gasEstimate = await factory.signer.estimateGas({ data: deployTx });
+    const anchor = await factory.deploy(handler, token, verifier, hasher, denomination, merkleTreeHeight, maxEdges, { gasLimit: gasEstimate });
     await anchor.deployed();
     const createdAnchor = new Anchor(anchor, signer, merkleTreeHeight, maxEdges, zkComponents);
     createdAnchor.latestSyncedBlock = anchor.deployTransaction.blockNumber!;
@@ -153,8 +152,9 @@ class Anchor implements IAnchor {
     );
   }
 
-  public async setHandler(handlerAddress: string, overrides?: Overrides) {
-    const tx = await this.contract.setHandler(handlerAddress, BigNumber.from((await this.contract.getProposalNonce())).add(1), overrides || {});
+  public async setHandler(handlerAddress: string) {
+    const gasEstimate = await this.contract.estimateGas.setHandler(handlerAddress, BigNumber.from((await this.contract.getProposalNonce())).add(1));
+    const tx = await this.contract.setHandler(handlerAddress, BigNumber.from((await this.contract.getProposalNonce())).add(1), {gasLimit: gasEstimate});
     await tx.wait();
   }
 
@@ -250,12 +250,14 @@ class Anchor implements IAnchor {
    * @param destinationChainId 
    * @returns 
    */
-  public async deposit(destinationChainId?: number, overrides?: Overrides): Promise<IAnchorDeposit> {
+  public async deposit(destinationChainId?: number): Promise<IAnchorDeposit> {
     const originChainId = getChainIdType(await this.signer.getChainId());
     const destChainId = (destinationChainId) ? destinationChainId : originChainId;
     const deposit = Anchor.generateDeposit(destChainId);
     
-    const tx = await this.contract.deposit(toFixedHex(deposit.commitment), overrides || {});
+    const gasEstimate = await this.contract.estimateGas.deposit(toFixedHex(deposit.commitment));
+    const tx = await this.contract.deposit(toFixedHex(deposit.commitment), {gasLimit: gasEstimate});
+
     const receipt = await tx.wait();
 
     // Deposit history and state altered.
@@ -274,19 +276,20 @@ class Anchor implements IAnchor {
   /**
    * Assumes the anchor has the correct, full deposit history.
    */
-  public async wrapAndDeposit(tokenAddress: string, wrappingFee: number, destinationChainId: number, overrides?: Overrides): Promise<IAnchorDeposit> {
+  public async wrapAndDeposit(tokenAddress: string, wrappingFee: number, destinationChainId: number): Promise<IAnchorDeposit> {
     const originChainId = getChainIdType(await this.signer.getChainId());
     const chainId = destinationChainId;
     const deposit = Anchor.generateDeposit(chainId);
+    const gasEstimate = await this.contract.estimateGas.wrapAndDeposit(tokenAddress, toFixedHex(deposit.commitment));
     let tx: ContractTransaction;
     if (checkNativeAddress(tokenAddress)) {
       tx = await this.contract.wrapAndDeposit(tokenAddress, toFixedHex(deposit.commitment), {
         value: this.getAmountToWrap(wrappingFee).toString(),
-        gasLimit: overrides?.gasLimit ? overrides.gasLimit : '0x5B8D80'
+        gasLimit: gasEstimate
       });
     } else {
-      tx = await this.contract.wrapAndDeposit(tokenAddress, toFixedHex(deposit.commitment), overrides || {
-        gasLimit: '0x5B8D80'
+      tx = await this.contract.wrapAndDeposit(tokenAddress, toFixedHex(deposit.commitment), {
+        gasLimit: gasEstimate
       });
     }
     const receipt = await tx.wait();
@@ -427,7 +430,6 @@ class Anchor implements IAnchor {
     relayer: string,
     fee: bigint,
     refreshCommitment: string | number,
-    overrides?: Overrides
   ): Promise<RefreshEvent | WithdrawalEvent> {
     const { publicInputs, extData } = await this.setupWithdraw(
       deposit,
@@ -437,11 +439,14 @@ class Anchor implements IAnchor {
       fee,
       refreshCommitment,
     );
-    //@ts-ignore
-    let tx = await this.contract.withdraw(
+    const gasEstimate = await this.contract.estimateGas.withdraw(
+      publicInputs,
+      extData
+    );
+    const tx = await this.contract.withdraw(
       publicInputs,
       extData,
-      overrides || { gasLimit: '0x5B8D80' }
+      { gasLimit: gasEstimate }
     );
     const receipt = await tx.wait();
 
@@ -464,8 +469,7 @@ class Anchor implements IAnchor {
     relayer: string,
     fee: bigint,
     refreshCommitment: string,
-    tokenAddress: string,
-    overrides?: Overrides
+    tokenAddress: string
   ): Promise<WithdrawalEvent> {
     // first, check if the merkle root is known on chain - if not, then update
     await this.checkKnownRoot();
@@ -478,8 +482,9 @@ class Anchor implements IAnchor {
       fee,
       refreshCommitment
     )
+    const gasEstimate = await this.contract.estimateGas.withdrawAndUnwrap(publicInputs, extData, tokenAddress);
 
-    let tx = await this.contract.withdrawAndUnwrap(publicInputs, extData, tokenAddress, overrides || { gasLimit: '0x5B8D80' });
+    const tx = await this.contract.withdrawAndUnwrap(publicInputs, extData, tokenAddress, { gasLimit: gasEstimate });
     const receipt = await tx.wait();
 
     const filter = this.contract.filters.Withdrawal(null, null, null);
@@ -499,7 +504,6 @@ class Anchor implements IAnchor {
     refund: string,
     refreshCommitment: string,
     tokenAddress: string,
-    overrides?: Overrides
   ): Promise<WithdrawalEvent> {
     refreshCommitment = (refreshCommitment) ? refreshCommitment : '0';
 
@@ -512,14 +516,17 @@ class Anchor implements IAnchor {
       BigInt(fee),
       refreshCommitment
     );
+    const gasEstimate = await this.contract.estimateGas.withdrawAndUnwrap(
+      publicInputs,
+      extData,
+      tokenAddress
+    );
 
-    let tx = await this.contract.withdrawAndUnwrap(
+    const tx = await this.contract.withdrawAndUnwrap(
       publicInputs,
       extData,
       tokenAddress,
-      overrides || {
-        gasLimit: '0x5B8D80'
-      },
+      { gasLimit: gasEstimate },
     );
     const receipt = await tx.wait();
 
@@ -627,8 +634,7 @@ class Anchor implements IAnchor {
     relayer: string,
     fee: string,
     refund: string,
-    refreshCommitment: string,
-    overrides?: Overrides
+    refreshCommitment: string
   ): Promise<WithdrawalEvent> {
     refreshCommitment = (refreshCommitment) ? refreshCommitment : '0';
 
@@ -642,12 +648,15 @@ class Anchor implements IAnchor {
       refreshCommitment
     );
 
-    let tx = await this.contract.withdraw(
+    const gasEstimate = await this.contract.estimateGas.withdraw(
+      publicInputs,
+      extData
+    );
+
+    const tx = await this.contract.withdraw(
       publicInputs,
       extData,
-      overrides || {
-        gasLimit: '0x5B8D80'
-      },
+      { gasLimit: gasEstimate },
     );
 
     const receipt = await tx.wait();

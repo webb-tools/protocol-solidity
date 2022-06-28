@@ -38,10 +38,10 @@ async function deploySignatureVBridge(
   let existingWebbTokens = new Map<number, GovernedTokenWrapper>();
   let governorConfig: Record<number, ethers.Wallet> = {};
 
-  for (const chainIdType of Object.keys(deployers.wallets)) {
+  for (const chainIdType of Object.keys(deployers)) {
     assetRecord[chainIdType] = tokens[chainIdType];
     chainIdsArray.push(Number(chainIdType));
-    governorConfig[Number(chainIdType)] = deployers.wallets[chainIdType];
+    governorConfig[Number(chainIdType)] = deployers[chainIdType];
     existingWebbTokens[chainIdType] = null;
     console.log(tokens[chainIdType]);
   }

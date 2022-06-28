@@ -1,4 +1,4 @@
-import { ethers, Overrides } from 'ethers';
+import { ethers } from 'ethers';
 import { getChainIdType } from '@webb-tools/utils';
 import { toHex, generateFunctionSigHash } from '@webb-tools/sdk-core';
 import { GovernedTokenWrapper as GovernedTokenWrapperContract, GovernedTokenWrapper__factory } from '@webb-tools/contracts';
@@ -27,10 +27,18 @@ export class GovernedTokenWrapper {
     governor: string,
     limit: string,
     isNativeAllowed: boolean,
-    deployer: ethers.Signer,
-    overrides?: Overrides,
+    deployer: ethers.Signer
   ) {
     const factory = new GovernedTokenWrapper__factory(deployer);
+    const deployTx = factory.getDeployTransaction(
+      name,
+      symbol,
+      feeRecipient,
+      governor,
+      limit,
+      isNativeAllowed,
+    ).data;
+    const gasEstimate = await factory.signer.estimateGas({ data: deployTx });
     const contract = await factory.deploy(
       name,
       symbol,
@@ -38,7 +46,7 @@ export class GovernedTokenWrapper {
       governor,
       limit,
       isNativeAllowed,
-      overrides || {}
+      { gasLimit: gasEstimate }
     );
     await contract.deployed();
 
@@ -53,9 +61,10 @@ export class GovernedTokenWrapper {
     return tokenWrapper;
   }
 
-  public async grantMinterRole(address: string, overrides?: Overrides) {
+  public async grantMinterRole(address: string) {
     const MINTER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE'));
-    const tx = await this.contract.grantRole(MINTER_ROLE, address, overrides || {});
+    const gasEstimate = await this.contract.estimateGas.grantRole(MINTER_ROLE, address);
+    const tx = await this.contract.grantRole(MINTER_ROLE, address, { gasLimit: gasEstimate });
     await tx.wait();
     return;
   }
