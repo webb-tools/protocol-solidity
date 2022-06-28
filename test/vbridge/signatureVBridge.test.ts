@@ -20,7 +20,7 @@ const path = require('path');
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-describe.only('2-sided multichain tests for signature vbridge', () => {
+describe('2-sided multichain tests for signature vbridge', () => {
   const chainID1 = getChainIdType(31337);
   const chainID2 = getChainIdType(1337);
   // setup ganache networks
@@ -789,8 +789,6 @@ describe('8-sided multichain tests for signature vbridge', () => {
     ganacheProvider3.pollingInterval = 1;
     let ganacheWallet3 = new ethers.Wallet('c0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e', ganacheProvider3);
     beforeEach(async () => {
-      const signers = await hhEthers.getSigners();
-
       existingToken1 = await MintableToken.createToken('existingERC20', 'EXIST', hardhatWallet1);
       // Use some other signer with provider on other chain
       existingToken2 = await MintableToken.createToken('existingERC20', 'EXIST', ganacheWallet2);
