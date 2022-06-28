@@ -1,5 +1,5 @@
-import { BigNumber, ethers } from 'ethers';
-import { getChainIdType, Overrides } from '@webb-tools/utils';
+import { BigNumber, ethers, Overrides } from 'ethers';
+import { getChainIdType } from '@webb-tools/utils';
 import { toHex, generateFunctionSigHash, toFixedHex } from '@webb-tools/sdk-core';
 import { Treasury as TreasuryContract, Treasury__factory } from '@webb-tools/contracts';
 

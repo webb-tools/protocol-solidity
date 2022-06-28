@@ -1,5 +1,5 @@
-import { ethers } from 'ethers';
-import { getChainIdType, ZkComponents, Overrides } from "@webb-tools/utils";
+import { ethers, Overrides } from 'ethers';
+import { getChainIdType, ZkComponents } from "@webb-tools/utils";
 import { PoseidonT3__factory } from "@webb-tools/contracts";
 import { MintableToken, GovernedTokenWrapper, Treasury, TreasuryHandler, TokenWrapperHandler } from "@webb-tools/tokens";
 import { BridgeInput, DeployerConfig, GovernorConfig, IAnchorDeposit } from "@webb-tools/interfaces";
@@ -178,8 +178,6 @@ export class SignatureBridge {
       //
       // loop through all the anchor sizes on the token
       for (let anchorSize of bridgeInput.anchorInputs.anchorSizes) {
-        console.log('before createAnchor');
-
         const anchorInstance = await Anchor.createAnchor(
           verifierInstance.address,
           hasherInstance.address,
@@ -195,7 +193,7 @@ export class SignatureBridge {
         );
 
         // grant minting rights to the anchor
-        await tokenInstance.grantMinterRole(anchorInstance.contract.address); 
+        await tokenInstance.grantMinterRole(anchorInstance.contract.address, deployers.gasLimits ? { gasLimit: deployers.gasLimits[chainID]} : { gasLimit: '0x5B8D80'}); 
 
         chainGroupedAnchors.push(anchorInstance);
         anchors.set(

@@ -1,4 +1,4 @@
-import { BigNumber, BigNumberish, ContractTransaction, ethers } from 'ethers';
+import { BigNumber, BigNumberish, ContractTransaction, ethers, Overrides } from 'ethers';
 import { VAnchor as VAnchorContract, VAnchor__factory, VAnchorEncodeInputs__factory } from '@webb-tools/contracts';
 import {
   toHex,
@@ -21,7 +21,7 @@ import {
   FIELD_SIZE
 } from '@webb-tools/sdk-core';
 import { IAnchorDeposit, IAnchor, IVariableAnchorExtData, IVariableAnchorPublicInputs, IAnchorDepositInfo } from '@webb-tools/interfaces';
-import { getChainIdType, ZkComponents, Overrides } from '@webb-tools/utils';
+import { getChainIdType, ZkComponents } from '@webb-tools/utils';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
 
 const zeroAddress = "0x0000000000000000000000000000000000000000";
@@ -116,12 +116,13 @@ export class VAnchor implements IAnchor {
     smallCircuitZkComponents: ZkComponents,
     largeCircuitZkComponents: ZkComponents,
     signer: ethers.Signer,
+    overrides?: Overrides
   ) {
     const encodeLibraryFactory = new VAnchorEncodeInputs__factory(signer);
-    const encodeLibrary = await encodeLibraryFactory.deploy();
+    const encodeLibrary = await encodeLibraryFactory.deploy(overrides || {});
     await encodeLibrary.deployed();
     const factory = new VAnchor__factory({["contracts/libs/VAnchorEncodeInputs.sol:VAnchorEncodeInputs"]: encodeLibrary.address}, signer);
-    const vAnchor = await factory.deploy(verifier, levels, hasher, handler, token, maxEdges, {});
+    const vAnchor = await factory.deploy(verifier, levels, hasher, handler, token, maxEdges, overrides || {});
     await vAnchor.deployed();
     const createdVAnchor = new VAnchor(vAnchor, signer, BigNumber.from(levels).toNumber(), maxEdges, smallCircuitZkComponents, largeCircuitZkComponents);
     createdVAnchor.latestSyncedBlock = vAnchor.deployTransaction.blockNumber!;

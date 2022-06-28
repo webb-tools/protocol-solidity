@@ -94,7 +94,7 @@ describe('multichain tests for erc20 bridges', () => {
       const signers = await ethers.getSigners();
 
       // Create a token to test bridge construction support for existing tokens
-      tokenInstance1 = await MintableToken.createToken(tokenName, tokenAbbreviation, signers[7]);
+      tokenInstance1 = await MintableToken.createToken(tokenName, tokenAbbreviation, signers[3]);
       tokenInstance2 = await MintableToken.createToken(tokenName, tokenAbbreviation, ganacheWallet2);
       tokenInstance3 = await MintableToken.createToken(tokenName, tokenAbbreviation, ganacheWallet3);
 
@@ -131,11 +131,7 @@ describe('multichain tests for erc20 bridges', () => {
         [chainID2]: ethers.Wallet.createRandom(),
       };
 
-      console.log('before deployFixedDepositBridge');
-
       const bridge = await SignatureBridge.deployFixedDepositBridge(bridge2WebbEthInput, deploymentConfig, initialGovernorsConfig, zkComponents2);
-
-      console.log('after deployFixedDepositBridge');
 
       // Should be able to retrieve individual anchors
       const anchorSize = '1000000000000000000';
@@ -150,13 +146,9 @@ describe('multichain tests for erc20 bridges', () => {
       // get the state of anchors before deposit
       const sourceAnchorRootBefore = await anchor1.contract.getLastRoot();
 
-      console.log('before bridgeDeposit');
-
       // Deposit on the bridge
       const depositNote = await bridge.deposit(chainID2, anchorSize, signers[2]);
       
-      console.log('after bridgeDeposit');
-
       // Check the state of anchors after deposit
       let edgeIndex = await anchor2.contract.edgeIndex(chainID1);
 
@@ -166,10 +158,8 @@ describe('multichain tests for erc20 bridges', () => {
       // make sure the roots / anchors state have changed
       assert.notEqual(sourceAnchorRootAfter, sourceAnchorRootBefore);
       assert.deepEqual(ethers.BigNumber.from(0), destAnchorEdgeAfter.latestLeafIndex);
-      console.log('before bridgeWithdraw');
 
       await bridge.withdraw(depositNote, anchorSize, signers[1].address, signers[1].address, ganacheWallet2);
-      console.log('after bridgeWithdraw');
 
       const webbTokenAddress2 = bridge.getWebbTokenAddress(chainID2);
       const webbToken2 = await MintableToken.tokenFromAddress(webbTokenAddress2!, ganacheWallet2);
@@ -508,7 +498,7 @@ describe('multichain tests for erc20 bridges', () => {
     before(async () => {
       const signers = await ethers.getSigners();
 
-      existingTokenSrc = await MintableToken.createToken('existingERC20', 'EXIST', signers[7]);
+      existingTokenSrc = await MintableToken.createToken('existingERC20', 'EXIST', signers[3]);
       existingTokenSrc2 = await MintableToken.createToken('existingERC20', 'EXIST', ganacheWallet2);
       existingTokenSrc3 = await MintableToken.createToken('existingERC20', 'EXIST', ganacheWallet3);
       existingTokenSrc4 = await MintableToken.createToken('existingERC20', 'EXIST', ganacheWallet4);

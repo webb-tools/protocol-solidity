@@ -1,4 +1,4 @@
-import { BigNumberish, ethers, BigNumber, ContractTransaction } from 'ethers';
+import { BigNumberish, ethers, BigNumber, ContractTransaction, Overrides } from 'ethers';
 import { FixedDepositAnchor as AnchorContract, FixedDepositAnchor__factory as Anchor__factory, ERC20__factory} from '@webb-tools/contracts'
 import { RefreshEvent, WithdrawalEvent } from '@webb-tools/contracts/src/FixedDepositAnchor';
 import { IAnchorDeposit, IAnchorDepositInfo, IAnchor, IFixedAnchorPublicInputs, IFixedAnchorExtData } from '@webb-tools/interfaces';
@@ -16,7 +16,7 @@ import {
   MerkleProof,
 } from '@webb-tools/sdk-core';
 import { hexToU8a } from '@polkadot/util';
-import { ZkComponents, getChainIdType, Overrides } from '@webb-tools/utils'
+import { ZkComponents, getChainIdType } from '@webb-tools/utils'
 import { poseidon } from 'circomlibjs';
 
 const zeroAddress = "0x0000000000000000000000000000000000000000";

@@ -1,5 +1,4 @@
-import { ethers } from "ethers";
-import { Overrides } from "@webb-tools/utils";
+import { ethers, Overrides } from "ethers";
 import {
   Verifier as VerifierContract,
   Verifier__factory,

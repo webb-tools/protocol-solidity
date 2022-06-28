@@ -1,10 +1,9 @@
-import { ethers } from 'ethers';
+import { ethers, Overrides } from 'ethers';
 import { AnchorProxy as AnchorProxyContract, AnchorProxy__factory } from '@webb-tools/contracts';
 import { WithdrawalEvent, RefreshEvent } from '@webb-tools/contracts/src/FixedDepositAnchor';
 import { Anchor } from './Anchor';
 import { IAnchorDepositInfo } from '@webb-tools/interfaces';
 import { toFixedHex } from "@webb-tools/sdk-core";
-import { Overrides } from "@webb-tools/utils";
 
 enum InstanceState {
   ENABLED,

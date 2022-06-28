@@ -1,5 +1,5 @@
-import { ethers } from 'ethers';
-import { getChainIdType, Overrides } from '@webb-tools/utils';
+import { ethers, Overrides } from 'ethers';
+import { getChainIdType } from '@webb-tools/utils';
 import { toHex, generateFunctionSigHash } from '@webb-tools/sdk-core';
 import { GovernedTokenWrapper as GovernedTokenWrapperContract, GovernedTokenWrapper__factory } from '@webb-tools/contracts';
 
@@ -53,9 +53,9 @@ export class GovernedTokenWrapper {
     return tokenWrapper;
   }
 
-  public async grantMinterRole(address: string) {
+  public async grantMinterRole(address: string, overrides?: Overrides) {
     const MINTER_ROLE = ethers.utils.keccak256(ethers.utils.toUtf8Bytes('MINTER_ROLE'));
-    const tx = await this.contract.grantRole(MINTER_ROLE, address);
+    const tx = await this.contract.grantRole(MINTER_ROLE, address, overrides || {});
     await tx.wait();
     return;
   }

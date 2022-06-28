@@ -1,35 +1,21 @@
 require('dotenv').config();
 import { getTokenBalance } from './getTokenBalance'
 import { ethers } from 'ethers';
-import { providerAthena, walletHermes, walletAthena } from '../ethersGovernorWallets';
+import { walletHermes, walletAthena, providerHermes } from '../ethersGovernorWallets';
 import { viewEdgeList } from '../viewActions/viewEdgeList';
 import { Anchor } from '@webb-tools/anchors';
+import { GovernedTokenWrapper, MintableToken } from '@webb-tools/tokens';
 import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
+import { viewTokensInWrapper } from './viewTokensInWrapper';
+import { mintTokensToAddress } from './mintTokensToAddress';
 const path = require('path');
 
 async function run() { 
-  const zkComponents = await fetchComponentsFromFilePaths(
-    path.resolve(__dirname, '../../../protocol-solidity-fixtures/fixtures/bridge/2/poseidon_bridge_2.wasm'),
-    path.resolve(__dirname, '../../../protocol-solidity-fixtures/fixtures/bridge/2/witness_calculator.js'),
-    path.resolve(__dirname, '../../../protocol-solidity-fixtures/fixtures/bridge/2/circuit_final.zkey')
-  );
+  // const token = await MintableToken.tokenFromAddress('0x4ddcaefad4cd01f6de911c33777100b1c530a85e', walletHermes);
+  // await token.mintTokens('0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF', '100000000000000000000');
 
-  const anchorHermes = await Anchor.connect('0x510C6297cC30A058F41eb4AF1BFC9953EaD8b577', zkComponents, walletHermes);
-  await anchorHermes.update();
-  const anchorAthena = await Anchor.connect('0x7758F98C1c487E5653795470eEab6C4698bE541b', zkComponents, walletAthena);
-  await anchorAthena.update();
-
-  console.log('num of elements in hermes: ', anchorHermes.tree.number_of_elements());
-  console.log('root of anchor hermes: ', anchorHermes.tree.root());
-  console.log('Hermes elements: ', anchorHermes.tree.elements());
-  console.log('Edge list of Athena on Hermes: ');
-  await viewEdgeList(anchorHermes, 5002);
-
-  console.log('num of elements in athena: ', anchorAthena.tree.number_of_elements());
-  console.log('root of anchor athena: ', anchorAthena.tree.root());
-  console.log('Athena elements: ', anchorAthena.tree.elements());
-  console.log('Edge list of Hermes on Athena: ');
-  await viewEdgeList(anchorAthena, 5001);
+  // await viewTokensInWrapper('0x510C6297cC30A058F41eb4AF1BFC9953EaD8b577', providerHermes);
+  await mintTokensToAddress('0xF2E246BB76DF876Cef8b38ae84130F4F55De395b', '0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF', walletHermes);
 }
 
 run();

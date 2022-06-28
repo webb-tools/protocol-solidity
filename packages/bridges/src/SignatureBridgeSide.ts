@@ -316,11 +316,9 @@ export class SignatureBridgeSide implements IBridgeSide {
 
   public async execute(proposalData: string, overrides?: Overrides) {
     const sig = await this.signingSystemSignFn(proposalData);
-    console.log('before execute()')
     const tx = overrides ? await this.contract.executeProposalWithSignature(proposalData, sig, overrides)
                          : await this.contract.executeProposalWithSignature(proposalData, sig);
     const receipt = await tx.wait();
-    
     return receipt;
   }
 
@@ -345,7 +343,6 @@ export class SignatureBridgeSide implements IBridgeSide {
 
   public async executeAddTokenProposalWithSig(governedToken: GovernedTokenWrapper, tokenAddress: string, overrides?: Overrides) {
     if (!this.tokenHandler) throw this.TOKEN_HANDLER_MISSING_ERROR;
-    console.log('inside executeAddTokenProposalWithSig');
     const proposalData = await this.createAddTokenUpdateProposalData(governedToken, tokenAddress);
     return (overrides ? this.execute(proposalData, overrides) : this.execute(proposalData));
   }
