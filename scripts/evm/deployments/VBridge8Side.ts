@@ -1,4 +1,4 @@
-import { VBridge } from '@webb-tools/vbridge';
+import { VBridge, VBridgeInput } from '@webb-tools/vbridge';
 import { GovernedTokenWrapper } from '@webb-tools/tokens';
 import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 import { DeployerConfig } from '@webb-tools/interfaces';
@@ -40,10 +40,11 @@ async function deploySignatureVBridge(
     console.log(tokens[chainIdType]);
   }
 
-  const bridgeInput = {
+  const bridgeInput: VBridgeInput = {
     vAnchorInputs: {
       asset: assetRecord,
     },
+    maxEdges: 7,
     chainIDs: chainIdsArray,
     webbTokens: existingWebbTokens
   }
@@ -99,7 +100,7 @@ async function run() {
     [chainIdTypeOptimism]: walletOptimism,
     [chainIdTypePolygon]: walletPolygon,
     [chainIdTypeMoonbase]: walletMoonbase,
-    [chainIdTypeArbitrum]: walletArbitrum
+    // [chainIdTypeArbitrum]: walletArbitrum
   };
 
   const tokens: Record<number, string[]> = {
@@ -110,7 +111,7 @@ async function run() {
     [chainIdTypeOptimism]: ['0', '0xbC6F6b680bc61e30dB47721c6D1c5cde19C1300d'],
     [chainIdTypePolygon]: ['0', '0x9c3C9283D3e44854697Cd22D3Faa240Cfb032889'],
     [chainIdTypeMoonbase]: ['0xD909178CC99d318e4D46e7E66a972955859670E1'],
-    [chainIdTypeArbitrum]: ['0', '0xEBbc3452Cc911591e4F18f3b36727Df45d6bd1f9']
+    // [chainIdTypeArbitrum]: ['0', '0xEBbc3452Cc911591e4F18f3b36727Df45d6bd1f9']
   }
 
   const vbridge = await deploySignatureVBridge(
